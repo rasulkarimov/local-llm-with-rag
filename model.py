@@ -17,18 +17,18 @@ global query_engine
 query_engine = None
 
 def init_llm():
-  llm = Ollama(model="llama2", request_timeout=300.0)
-  embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-en-v1.5")
-
-  Settings.llm = llm
-  Settings.embed_model = embed_model
+  Settings.llm = Ollama(model="llama3.1", request_timeout=400.0)
+  # embeddings model
+  Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-en-v1.5")
 
 def init_index(embed_model):
+
+  # chunking
   reader = SimpleDirectoryReader(input_dir="./docs", recursive=True)
   documents = reader.load_data()
-
   logging.info("index creating with `%d` documents", len(documents))
 
+  # Vector databases
   # EphemeralClient does not store any data on disk and Creates an in-memory instance of Chroma
   chroma_client = chromadb.EphemeralClient()
   chroma_collection = chroma_client.create_collection("iollama")
@@ -45,19 +45,20 @@ def init_query_engine(index):
 
   # custome prompt template
   template = (
-      "Imagine you are an advanced AI expert in cyber security laws, with access to all current and relevant legal documents, "
-      "case studies, and expert analyses. Your goal is to provide insightful, accurate, and concise answers to questions in this domain.\n\n"
+      "Imagine you are an advanced AI expert in document analysis, with access to all current and relevant documents, "
+      "case studies, and expert analyses. Your goal is to provide insightful, accurate, and concise answers to questions.\n\n"
       "Here is some context related to the query:\n"
       "-----------------------------------------\n"
       "{context_str}\n"
       "-----------------------------------------\n"
-      "Considering the above information, please respond to the following inquiry with detailed references to applicable laws, "
+      "Considering the above information, please respond to the following inquiry with detailes, "
       "precedents, or principles where appropriate:\n\n"
       "Question: {query_str}\n\n"
-      "Answer succinctly, starting with the phrase 'According to cyber security law,' and ensure your response is understandable to someone without a legal background."
+      "Answer succinctly, starting with the phrase 'According to available information,' and ensure your response is understandable to someone without expert background."
   )
   qa_template = PromptTemplate(template)
 
+  # Query engine
   # build query engine with custom template
   # text_qa_template specifies custom template
   # similarity_top_k configure the retriever to return the top 3 most similar documents,
